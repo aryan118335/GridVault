@@ -30,3 +30,16 @@ CREATE TABLE IF NOT EXISTS dispatch_logs (
     reason TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- ------------------------------------------------------------------------------
+-- 3. SEED DATA
+-- Baseline state of charge and initial algorithm dispatch decisions.
+-- ------------------------------------------------------------------------------
+INSERT INTO battery_status (charge_percent, max_capacity_mw, mode)
+VALUES (75.00, 100.00, 'STANDBY');
+
+INSERT INTO dispatch_logs (action, power_mw, reason)
+VALUES
+    ('CHARGE', 25.50, 'Excess solar generation absorption during off-peak'),
+    ('DISCHARGE', 40.00, 'Peak demand reduction during high tariff period'),
+    ('STANDBY', 0.00, 'Grid frequency stabilization within nominal bounds');
