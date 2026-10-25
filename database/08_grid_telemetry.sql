@@ -26,3 +26,10 @@ CREATE TABLE IF NOT EXISTS grid_state (
     grid_frequency_hz NUMERIC(5, 2) DEFAULT 50.00,
     grid_status VARCHAR(30) DEFAULT 'BALANCED'
 );
+
+-- ------------------------------------------------------------------------------
+-- 2. TIME-SERIES INDEX
+-- Descending B-Tree index on recorded_at for fast Chart.js live & history reads.
+-- ------------------------------------------------------------------------------
+CREATE INDEX IF NOT EXISTS idx_grid_state_recorded_at_desc
+    ON grid_state (recorded_at DESC);
