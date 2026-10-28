@@ -1,8 +1,10 @@
 /**
  * GridVault ESS - Live Grid Telemetry Worker
  * Module: Live Grid Telemetry & Power Balance (Ayush)
- * Computes realistic time-of-day solar generation, wind variance, and city power demand.
+ * Computes realistic time-of-day solar generation, wind variance, and city power demand,
+ * and persists telemetry ticks to PostgreSQL using raw SQL.
  */
+import { query } from '../config/db.js';
 
 const clamp = (val, min, max) => Math.min(max, Math.max(min, val));
 const round2 = (val) => Number(val.toFixed(2));
@@ -60,4 +62,40 @@ export function computeGridTick(now = new Date()) {
   };
 }
 
-export default { computeGridTick };
+/**
+ * Generate one realistic grid telemetry tick and persist it to PostgreSQL grid_state.
+ */
+export async function generateGridTick(now = new Date()) {
+  const tick = computeGridTick(now);
+
+  const insertResult = await query(
+    `INSERT INTO grid_state (
+       recorded_at,
+       solar_mw,
+       wind_mw,
+       demand_mw,
+       net_balance_mw,
+       grid_frequency_hz,
+       grid_status
+     )
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     RETURNING id, recorded_at, solar_mw, wind_mw, demand_mw, net_balance_mw, grid_frequency_hz, grid_status`,
+    [
+      tick.recorded_at,
+      tick.solar_mw,
+      tick.wind_mw,
+      tick.demand_mw,
+      tick.net_balance_mw,
+      tick.grid_frequency_hz,
+      tick.grid_status,
+    ]
+  );
+
+  if (insertResult.error || insertResult.rows.length === 0) {
+    throw new Error(insertResult.error || 'Failed to insert grid_state tick');
+  }
+
+  return insertResult.rows[0];
+}
+
+export default { computeGridTick, generateGridTick };
