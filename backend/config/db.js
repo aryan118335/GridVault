@@ -1,12 +1,23 @@
 /**
- * GridVault ESS - Neon PostgreSQL Connection Pool
+ * GridVault ESS - PostgreSQL Connection Pool
  * Provides connection pooling and resilient query execution for backend services.
  */
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import pg from 'pg';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load environment variables from root and backend .env files
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+dotenv.config();
 
 const { Pool } = pg;
 
-// Neon PostgreSQL connection pooler URL
+// PostgreSQL connection pooler URL (Supabase or fallback)
 const connectionString =
   process.env.DATABASE_URL ||
   'postgresql://neondb_owner:npg_XGbSB43vUhTN@ep-proud-unit-be2fzf6c-pooler.c-9.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require';
@@ -16,7 +27,7 @@ export const pool = new Pool({
   ssl: { rejectUnauthorized: false },
   max: 10,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 5000,
+  connectionTimeoutMillis: 10000,
 });
 
 /**
