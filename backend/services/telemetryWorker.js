@@ -62,8 +62,33 @@ export function computeGridTick(now = new Date()) {
   };
 }
 
+const MAX_TELEMETRY_ROWS = 500;
+
 /**
- * Generate one realistic grid telemetry tick and persist it to PostgreSQL grid_state.
+ * Prune stale telemetry rows beyond the latest maxRows records to keep grid_state bounded.
+ */
+export async function pruneOldTelemetryRows(maxRows = MAX_TELEMETRY_ROWS) {
+  const res = await query(
+    `DELETE FROM grid_state
+     WHERE id NOT IN (
+       SELECT id
+       FROM grid_state
+       ORDER BY recorded_at DESC, id DESC
+       LIMIT $1
+     )`,
+    [maxRows]
+  );
+
+  if (res.error) {
+    console.error('[TelemetryWorker] Stale row pruning error:', res.error);
+    return 0;
+  }
+  return res.rowCount || 0;
+}
+
+/**
+ * Generate one realistic grid telemetry tick, persist it to PostgreSQL grid_state,
+ * and prune old rows beyond the latest 500 records.
  */
 export async function generateGridTick(now = new Date()) {
   const tick = computeGridTick(now);
@@ -95,7 +120,8 @@ export async function generateGridTick(now = new Date()) {
     throw new Error(insertResult.error || 'Failed to insert grid_state tick');
   }
 
+  await pruneOldTelemetryRows(MAX_TELEMETRY_ROWS);
   return insertResult.rows[0];
 }
 
-export default { computeGridTick, generateGridTick };
+export default { computeGridTick, pruneOldTelemetryRows, generateGridTick };
