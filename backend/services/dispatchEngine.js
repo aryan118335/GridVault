@@ -236,3 +236,25 @@ export default {
   simulateHeavyRain,
   evaluateManualOverride,
 };
+
+/**
+- Simulate sudden cloudburst / monsoon rain event cutting solar output by 75%
+- @param {Object} params
+- @param {number} params.solarOutput - Baseline pre-event solar generation in MW
+- @param {number} params.cityDemand - Target city demand in MW
+- @returns {Promise<{ battery: Object, log: Object }>}
+ */
+export async function simulateHeavyRain({ solarOutput, cityDemand }) {
+  const originalSolar = Number(solarOutput) || 0;
+  const effectiveSolar = Number((originalSolar * 0.25).toFixed(2)); // 75% solar drop
+  const demand = Number(cityDemand) || 0;
+
+  const emergencyReason = `EMERGENCY_WEATHER_HEAVY_RAIN: Solar irradiance collapsed from ${originalSolar.toFixed(1)} MW to ${effectiveSolar.toFixed(1)} MW (-75%) due to sudden monsoon cloudburst`;
+
+  return evaluateDispatch({
+    solarMw: effectiveSolar,
+    cityDemandMw: demand,
+    windMw: 25,
+    triggerReason: emergencyReason,
+  });
+}
