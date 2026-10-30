@@ -124,4 +124,54 @@ export async function generateGridTick(now = new Date()) {
   return insertResult.rows[0];
 }
 
-export default { computeGridTick, pruneOldTelemetryRows, generateGridTick };
+let workerTimer = null;
+let isTickRunning = false;
+
+/**
+ * Start background telemetry worker on a safe configurable interval (default 10s).
+ * Catches all errors internally so a transient DB blip never crashes Express.
+ */
+export function startTelemetryWorker(intervalMs = 10000) {
+  if (workerTimer) {
+    return workerTimer;
+  }
+
+  const safeInterval = Math.max(1000, Number(intervalMs) || 10000);
+
+  const runTickSafely = async () => {
+    if (isTickRunning) return;
+    isTickRunning = true;
+    try {
+      await generateGridTick();
+    } catch (err) {
+      console.error('[TelemetryWorker] Background tick failed:', err.message);
+    } finally {
+      isTickRunning = false;
+    }
+  };
+
+  // Run an initial tick shortly after boot, then on the configured interval
+  runTickSafely();
+  workerTimer = setInterval(runTickSafely, safeInterval);
+  if (typeof workerTimer.unref === 'function') {
+    workerTimer.unref();
+  }
+
+  console.log(`[TelemetryWorker] Started grid_state background runner (${safeInterval}ms interval)`);
+  return workerTimer;
+}
+
+export function stopTelemetryWorker() {
+  if (workerTimer) {
+    clearInterval(workerTimer);
+    workerTimer = null;
+  }
+}
+
+export default {
+  computeGridTick,
+  pruneOldTelemetryRows,
+  generateGridTick,
+  startTelemetryWorker,
+  stopTelemetryWorker,
+};
