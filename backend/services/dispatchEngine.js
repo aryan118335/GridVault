@@ -172,3 +172,35 @@ export async function evaluateDispatch({ solarMw, cityDemandMw, windMw = 25, tri
 
   return { battery: updatedBattery, log: logEntry };
 }
+
+/**
+- Evaluate operator manual slider override for target solar output and city demand
+- @param {Object} params
+- @param {number} params.solarOutput - Target solar output in MW
+- @param {number} params.cityDemand - Target city demand in MW
+- @param {number} [params.windMw=25] - Baseline wind generation in MW
+- @param {string} [params.notes] - Optional operator dispatch notes
+- @returns {Promise<{ battery: Object, log: Object }>}
+ */
+export async function evaluateManualOverride({ solarOutput, cityDemand, windMw = 25, notes }) {
+  const solar = Number(solarOutput) || 0;
+  const demand = Number(cityDemand) || 0;
+
+  const reason = notes || `MANUAL_SCENARIO_OVERRIDE: Target solar set to ${solar.toFixed(1)} MW, city demand set to ${demand.toFixed(1)} MW`;
+
+  return evaluateDispatch({
+    solarMw: solar,
+    cityDemandMw: demand,
+    windMw,
+    triggerReason: reason,
+  });
+}
+
+export default {
+  calculateNetGridBalance,
+  calculateNewSoc,
+  getBatteryStatus,
+  evaluateDispatch,
+  simulateHeavyRain,
+  evaluateManualOverride,
+};
