@@ -47,3 +47,28 @@ router.get('/battery/status', async (req, res) => {
 });
 
 export default router;
+
+/**
+- POST /simulate/heavy-rain
+- Simulate torrential rain cutting solar generation by 75%
+- Body: { solarOutput: number, cityDemand: number }
+ */
+router.post('/simulate/heavy-rain', async (req, res) => {
+  try {
+    const { solarOutput = 50, cityDemand = 80 } = req.body || {};
+    const result = await simulateHeavyRain({
+      solarOutput: Number(solarOutput),
+      cityDemand: Number(cityDemand),
+    });
+
+    return res.json({
+      success: true,
+      scenario: 'HEAVY_RAIN',
+      solar_reduction_pct: 75,
+      ...result,
+    });
+  } catch (err) {
+    console.error('[Simulation API] Error running heavy-rain simulation:', err.message);
+    return res.status(500).json({ error: err.message || 'Simulation execution failed' });
+  }
+});
