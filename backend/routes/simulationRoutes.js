@@ -72,3 +72,27 @@ router.post('/simulate/heavy-rain', async (req, res) => {
     return res.status(500).json({ error: err.message || 'Simulation execution failed' });
   }
 });
+
+/**
+- POST /simulate/override
+- Manual operator control slider override for solar generation and city demand
+- Body: { solarOutput: number, cityDemand: number }
+ */
+router.post('/simulate/override', async (req, res) => {
+  try {
+    const { solarOutput = 50, cityDemand = 80 } = req.body || {};
+    const result = await evaluateDispatch({
+      solarMw: Number(solarOutput),
+      cityDemandMw: Number(cityDemand),
+    });
+
+    return res.json({
+      success: true,
+      message: 'Manual grid override evaluated and applied',
+      ...result,
+    });
+  } catch (err) {
+    console.error('[Simulation API] Error evaluating manual override:', err.message);
+    return res.status(500).json({ error: err.message || 'Override evaluation failed' });
+  }
+});
