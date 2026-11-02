@@ -112,4 +112,32 @@ router.get('/summary', async (_req, res) => {
   });
 });
 
+/**
+ * GET /api/grid/history?hours=24
+ * Returns historical grid_state rows within the requested rolling hour window.
+ */
+router.get('/history', async (req, res) => {
+  const parsedHours = Number(req.query.hours);
+  const hours = Number.isFinite(parsedHours) ? Math.min(168, Math.max(1, Math.round(parsedHours))) : 24;
+
+  const result = await query(
+    `SELECT id, recorded_at, solar_mw, wind_mw, demand_mw, net_balance_mw, grid_frequency_hz, grid_status
+     FROM grid_state
+     WHERE recorded_at >= NOW() - ($1::int * INTERVAL '1 hour')
+     ORDER BY recorded_at ASC, id ASC`,
+    [hours]
+  );
+
+  if (result.error) {
+    return res.status(500).json({ error: result.error, hours, data: [] });
+  }
+
+  const rows = result.rows.map(normalizeRow);
+  return res.json({
+    hours,
+    count: rows.length,
+    data: rows,
+  });
+});
+
 export default router;
