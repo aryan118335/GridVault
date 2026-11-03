@@ -96,3 +96,28 @@ router.post('/simulate/override', async (req, res) => {
     return res.status(500).json({ error: err.message || 'Override evaluation failed' });
   }
 });
+
+/**
+- GET /simulation/logs
+- Retrieve the latest 25 dispatch audit log records ordered by creation timestamp
+ */
+router.get('/simulation/logs', async (req, res) => {
+  try {
+    const { rows } = await query(
+      `SELECT id, action, power_mw, reason, created_at
+       FROM dispatch_logs
+       ORDER BY created_at DESC, id DESC
+       LIMIT 25`
+    );
+
+    const formattedLogs = (rows || []).map((row) => ({
+      ...row,
+      power_mw: parseFloat(row.power_mw),
+    }));
+
+    return res.json(formattedLogs);
+  } catch (err) {
+    console.error('[Simulation API] Error fetching simulation logs:', err.message);
+    return res.status(500).json({ error: err.message || 'Failed to fetch logs' });
+  }
+});
