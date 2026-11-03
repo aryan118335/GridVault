@@ -140,4 +140,20 @@ router.get('/history', async (req, res) => {
   });
 });
 
+/**
+ * POST /api/grid/tick
+ * Manually triggers generateGridTick() and returns the newly inserted telemetry row.
+ */
+router.post('/tick', async (_req, res) => {
+  try {
+    const inserted = await generateGridTick();
+    return res.status(201).json({
+      status: 'created',
+      data: normalizeRow(inserted),
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message || 'Failed to generate grid tick' });
+  }
+});
+
 export default router;
