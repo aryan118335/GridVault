@@ -9,10 +9,11 @@
  * global error handling, and starts the HTTP server on PORT 4001.
  *
  * Route prefixes:
- *   /api/roi/*         → roiRoutes.js      (PaybackCurveChart, ExecutiveSummary)
- *   /api/export/*      → exportRoutes.js   (BulkTelemetryExportButton, ComplianceAuditLog)
- *   /api/reports/*     → reportsRoutes.js  (RegulatoryReportTable, PdfVerificationPipeline)
- *   /api/health/*      → healthRoutes.js   (SystemReadinessPanel)
+ *   /api/roi/*         → roiRoutes.js        (PaybackCurveChart, ExecutiveSummary)
+ *   /api/export/*      → exportRoutes.js     (BulkTelemetryExportButton, ComplianceAuditLog)
+ *   /api/reports/*     → reportsRoutes.js    (RegulatoryReportTable, PdfVerificationPipeline)
+ *   /api/health/*      → healthRoutes.js     (SystemReadinessPanel)
+ *   /api/*             → simulationRoutes.js (Battery Status, Real-Time Dispatch & Heavy Rain)
  */
 
 import dotenv from 'dotenv';
@@ -34,6 +35,7 @@ import roiRoutes from './routes/roiRoutes.js';
 import exportRoutes from './routes/exportRoutes.js';
 import reportsRoutes from './routes/reportsRoutes.js';
 import healthRoutes from './routes/healthRoutes.js';
+import simulationRoutes from './routes/simulationRoutes.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // App bootstrap
@@ -87,6 +89,7 @@ app.use('/api/roi', roiRoutes);
 app.use('/api/export', exportRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/health', healthRoutes);
+app.use('/api', simulationRoutes);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Root ping — basic liveness check
@@ -98,6 +101,10 @@ app.get('/', (_req, res) => {
     status: 'running',
     timestamp: new Date().toISOString(),
     routes: [
+      'GET /api/battery/status',
+      'POST /api/simulate/heavy-rain',
+      'POST /api/simulate/override',
+      'GET /api/simulation/logs',
       'GET /api/roi/summary',
       'GET /api/roi/payback-curve',
       'GET /api/roi/financial-records/monthly-breakdown',
@@ -145,7 +152,7 @@ app.listen(PORT, () => {
   console.log(`\n🔋 GridVault ESS Analytics API running on http://localhost:${PORT}`);
   console.log(`   Author : Varad Bhardwaj`);
   console.log(`   DB     : Neon PostgreSQL (28 tables)`);
-  console.log(`   Routes : ROI · Export · Reports · Health\n`);
+  console.log(`   Routes : ROI · Export · Reports · Health · Simulation\n`);
 });
 
 export default app;

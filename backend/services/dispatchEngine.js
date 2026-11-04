@@ -40,6 +40,7 @@ export function calculateNewSoc(currentSoc, mode, powerMw, maxCapacityMw = 100.0
   const power = Number(powerMw) || 0;
 
   if (mode === 'CHARGING') {
+    // 5% SOC shift per nominal dispatch step scaled to power throughput
     const socIncrement = Math.max(0.5, (power / capacity) * 5.0);
     return Math.min(100.00, Number((soc + socIncrement).toFixed(2)));
   }
@@ -53,8 +54,8 @@ export function calculateNewSoc(currentSoc, mode, powerMw, maxCapacityMw = 100.0
 }
 
 /**
-- Fetch the latest battery state of charge and telemetry from PostgreSQL
-- @returns {Promise<Object>} Latest row from battery_status table
+ * Fetch the latest battery state of charge and telemetry from PostgreSQL
+ * @returns {Promise<Object>} Latest row from battery_status table
  */
 export async function getBatteryStatus() {
   const res = await query(
@@ -65,6 +66,7 @@ export async function getBatteryStatus() {
   );
 
   if (!res.rows || res.rows.length === 0) {
+    // Resilient fallback defaults
     return {
       id: 1,
       charge_percent: 75.0,
@@ -82,13 +84,13 @@ export async function getBatteryStatus() {
 }
 
 /**
-- Evaluate real-time grid conditions, dispatch battery, and persist state & audit log
-- @param {Object} params
-- @param {number} params.solarMw - Current solar generation in MW
-- @param {number} params.cityDemandMw - Current city demand in MW
-- @param {number} [params.windMw=25] - Real-time wind generation in MW
-- @param {string} [params.triggerReason] - Reason description for audit log
-- @returns {Promise<{ battery: Object, log: Object }>}
+ * Evaluate real-time grid conditions, dispatch battery, and persist state & audit log
+ * @param {Object} params
+ * @param {number} params.solarMw - Current solar generation in MW
+ * @param {number} params.cityDemandMw - Current city demand in MW
+ * @param {number} [params.windMw=25] - Real-time wind generation in MW
+ * @param {string} [params.triggerReason] - Reason description for audit log
+ * @returns {Promise<{ battery: Object, log: Object }>}
  */
 export async function evaluateDispatch({ solarMw, cityDemandMw, windMw = 25, triggerReason }) {
   const currentBattery = await getBatteryStatus();
@@ -101,6 +103,7 @@ export async function evaluateDispatch({ solarMw, cityDemandMw, windMw = 25, tri
   let powerMw = 0;
 
   if (netBalance > 2.0) {
+    // Generation surplus: Charge battery if headroom available
     if (currentSoc >= 100.0) {
       mode = 'STANDBY';
       powerMw = 0.0;
@@ -109,6 +112,7 @@ export async function evaluateDispatch({ solarMw, cityDemandMw, windMw = 25, tri
       powerMw = Math.min(netBalance, maxCapacityMw);
     }
   } else if (netBalance < -2.0) {
+    // Generation deficit: Discharge battery if reserve available
     if (currentSoc <= 5.0) {
       mode = 'STANDBY';
       powerMw = 0.0;
@@ -117,12 +121,14 @@ export async function evaluateDispatch({ solarMw, cityDemandMw, windMw = 25, tri
       powerMw = Math.min(Math.abs(netBalance), maxCapacityMw);
     }
   } else {
+    // Within ±2 MW deadband: Standby mode
     mode = 'STANDBY';
     powerMw = 0.0;
   }
 
   const newSoc = calculateNewSoc(currentSoc, mode, powerMw, maxCapacityMw);
 
+  // Construct audit reason
   let reason = triggerReason;
   if (!reason) {
     if (mode === 'CHARGING') {
@@ -134,6 +140,7 @@ export async function evaluateDispatch({ solarMw, cityDemandMw, windMw = 25, tri
     }
   }
 
+  // Persist updated battery status
   const updateRes = await query(
     `UPDATE battery_status
      SET charge_percent = $1, mode = $2, updated_at = NOW()
@@ -150,6 +157,7 @@ export async function evaluateDispatch({ solarMw, cityDemandMw, windMw = 25, tri
       }
     : { ...currentBattery, charge_percent: newSoc, mode, updated_at: new Date().toISOString() };
 
+  // Insert immutable audit log into dispatch_logs
   const logRes = await query(
     `INSERT INTO dispatch_logs (action, power_mw, reason, created_at)
      VALUES ($1, $2, $3, NOW())
@@ -174,75 +182,11 @@ export async function evaluateDispatch({ solarMw, cityDemandMw, windMw = 25, tri
 }
 
 /**
-- Evaluate operator manual slider override for target solar output and city demand
-- @param {Object} params
-- @param {number} params.solarOutput - Target solar output in MW
-- @param {number} params.cityDemand - Target city demand in MW
-- @param {number} [params.windMw=25] - Baseline wind generation in MW
-- @param {string} [params.notes] - Optional operator dispatch notes
-- @returns {Promise<{ battery: Object, log: Object }>}
- */
-export async function evaluateManualOverride({ solarOutput, cityDemand, windMw = 25, notes }) {
-  const solar = Number(solarOutput) || 0;
-  const demand = Number(cityDemand) || 0;
-
-  const reason = notes || `MANUAL_SCENARIO_OVERRIDE: Target solar set to ${solar.toFixed(1)} MW, city demand set to ${demand.toFixed(1)} MW`;
-
-  return evaluateDispatch({
-    solarMw: solar,
-    cityDemandMw: demand,
-    windMw,
-    triggerReason: reason,
-  });
-}
-
-export default {
-  calculateNetGridBalance,
-  calculateNewSoc,
-  getBatteryStatus,
-  evaluateDispatch,
-  simulateHeavyRain,
-  evaluateManualOverride,
-};
-
-/**
-- Evaluate operator manual slider override for target solar output and city demand
-- @param {Object} params
-- @param {number} params.solarOutput - Target solar output in MW
-- @param {number} params.cityDemand - Target city demand in MW
-- @param {number} [params.windMw=25] - Baseline wind generation in MW
-- @param {string} [params.notes] - Optional operator dispatch notes
-- @returns {Promise<{ battery: Object, log: Object }>}
- */
-export async function evaluateManualOverride({ solarOutput, cityDemand, windMw = 25, notes }) {
-  const solar = Number(solarOutput) || 0;
-  const demand = Number(cityDemand) || 0;
-
-  const reason = notes || `MANUAL_SCENARIO_OVERRIDE: Target solar set to ${solar.toFixed(1)} MW, city demand set to ${demand.toFixed(1)} MW`;
-
-  return evaluateDispatch({
-    solarMw: solar,
-    cityDemandMw: demand,
-    windMw,
-    triggerReason: reason,
-  });
-}
-
-export default {
-  calculateNetGridBalance,
-  calculateNewSoc,
-  getBatteryStatus,
-  evaluateDispatch,
-  simulateHeavyRain,
-  evaluateManualOverride,
-};
-
-/**
-- Simulate sudden cloudburst / monsoon rain event cutting solar output by 75%
-- @param {Object} params
-- @param {number} params.solarOutput - Baseline pre-event solar generation in MW
-- @param {number} params.cityDemand - Target city demand in MW
-- @returns {Promise<{ battery: Object, log: Object }>}
+ * Simulate sudden cloudburst / monsoon rain event cutting solar output by 75%
+ * @param {Object} params
+ * @param {number} params.solarOutput - Baseline pre-event solar generation in MW
+ * @param {number} params.cityDemand - Target city demand in MW
+ * @returns {Promise<{ battery: Object, log: Object }>}
  */
 export async function simulateHeavyRain({ solarOutput, cityDemand }) {
   const originalSolar = Number(solarOutput) || 0;
@@ -258,3 +202,35 @@ export async function simulateHeavyRain({ solarOutput, cityDemand }) {
     triggerReason: emergencyReason,
   });
 }
+
+/**
+ * Evaluate operator manual slider override for target solar output and city demand
+ * @param {Object} params
+ * @param {number} params.solarOutput - Target solar output in MW
+ * @param {number} params.cityDemand - Target city demand in MW
+ * @param {number} [params.windMw=25] - Baseline wind generation in MW
+ * @param {string} [params.notes] - Optional operator dispatch notes
+ * @returns {Promise<{ battery: Object, log: Object }>}
+ */
+export async function evaluateManualOverride({ solarOutput, cityDemand, windMw = 25, notes }) {
+  const solar = Number(solarOutput) || 0;
+  const demand = Number(cityDemand) || 0;
+
+  const reason = notes || `MANUAL_SCENARIO_OVERRIDE: Target solar set to ${solar.toFixed(1)} MW, city demand set to ${demand.toFixed(1)} MW`;
+
+  return evaluateDispatch({
+    solarMw: solar,
+    cityDemandMw: demand,
+    windMw,
+    triggerReason: reason,
+  });
+}
+
+export default {
+  calculateNetGridBalance,
+  calculateNewSoc,
+  getBatteryStatus,
+  evaluateDispatch,
+  simulateHeavyRain,
+  evaluateManualOverride,
+};
