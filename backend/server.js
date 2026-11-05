@@ -36,6 +36,8 @@ import exportRoutes from './routes/exportRoutes.js';
 import reportsRoutes from './routes/reportsRoutes.js';
 import healthRoutes from './routes/healthRoutes.js';
 import simulationRoutes from './routes/simulationRoutes.js';
+import gridRoutes from './routes/gridRoutes.js';
+import { startTelemetryWorker } from './services/telemetryWorker.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // App bootstrap
@@ -89,6 +91,7 @@ app.use('/api/roi', roiRoutes);
 app.use('/api/export', exportRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/health', healthRoutes);
+app.use('/api/grid', gridRoutes);
 app.use('/api', simulationRoutes);
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -101,6 +104,10 @@ app.get('/', (_req, res) => {
     status: 'running',
     timestamp: new Date().toISOString(),
     routes: [
+      'GET /api/grid/live',
+      'GET /api/grid/summary',
+      'GET /api/grid/history?hours=24',
+      'POST /api/grid/tick',
       'GET /api/battery/status',
       'POST /api/simulate/heavy-rain',
       'POST /api/simulate/override',
@@ -152,7 +159,8 @@ app.listen(PORT, () => {
   console.log(`\n🔋 GridVault ESS Analytics API running on http://localhost:${PORT}`);
   console.log(`   Author : Varad Bhardwaj`);
   console.log(`   DB     : Neon PostgreSQL (28 tables)`);
-  console.log(`   Routes : ROI · Export · Reports · Health · Simulation\n`);
+  console.log(`   Routes : Grid · ROI · Export · Reports · Health · Simulation\n`);
+  startTelemetryWorker();
 });
 
 export default app;
