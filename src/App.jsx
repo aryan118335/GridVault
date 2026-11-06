@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import DashboardLayout from './components/layout/DashboardLayout.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
+import AnalyticsPage from './components/analytics/AnalyticsPage.jsx';
 
 function TeammateRouteNotice({ title, owner }) {
   return (
@@ -24,11 +25,9 @@ export default function App() {
         path="/simulation"
         element={<TeammateRouteNotice title="Simulation & Control Panel" owner="Aryan" />}
       />
-      <Route
-        path="/analytics"
-        element={<TeammateRouteNotice title="Analytics, ROI & Compliance Reports" owner="Varad" />}
-      />
+      <Route path="/analytics" element={<AnalyticsPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
+
