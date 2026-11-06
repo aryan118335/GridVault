@@ -3,6 +3,7 @@ import DashboardLayout from '../layout/DashboardLayout.jsx';
 import KPIHeaderRibbon from './KPIHeaderRibbon.jsx';
 import DateRangeSelector from './DateRangeSelector.jsx';
 import TabbedViewSwitch from './TabbedViewSwitch.jsx';
+import ExecutiveSummary from './ExecutiveSummary.jsx';
 
 /**
  * AnalyticsPage
@@ -43,15 +44,8 @@ export default function AnalyticsPage() {
         {/* Tab 1: Executive Overview */}
         {activeTab === 'overview' && (
           <div className="space-y-6">
-            {/* Executive Summary Cards Slot (Nov 06 4:30 PM Milestone) */}
-            <section className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-teal-500/40 bg-slate-800/50 p-8 text-center shadow-[0_0_24px_rgba(20,184,166,0.1)]">
-              <p className="text-sm font-semibold text-teal-300">
-                Executive Financial KPI Summary Cards Slot
-              </p>
-              <p className="mt-1 text-xs text-slate-400">
-                Ready for Nov 06 4:30 PM Integration (Total Money Saved &amp; Carbon Offset Cards)
-              </p>
-            </section>
+            {/* Executive Financial KPI Summary Cards */}
+            <ExecutiveSummary />
 
             {/* Financial Chart Slot Placeholder (Nov 07 Milestone) */}
             <section className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-700/80 bg-slate-800/50 p-10 text-center">
