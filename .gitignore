@@ -1,0 +1,26 @@
+# Dependencies & Virtual Environments
+node_modules/
+.venv/
+__pycache__/
+*.py[cod]
+
+# Build & Runtime Artifacts
+dist/
+build/
+.vite/
+coverage/
+*.log
+npm-debug.log*
+*.db
+
+# OS & Editor
+.DS_Store
+.vscode/
+
+# Environment & Secrets
+.env
+.env.local
+.env.production
+.env.development
+.env.test
+.env.*.local
