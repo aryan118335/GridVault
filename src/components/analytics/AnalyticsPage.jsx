@@ -4,6 +4,7 @@ import KPIHeaderRibbon from './KPIHeaderRibbon.jsx';
 import DateRangeSelector from './DateRangeSelector.jsx';
 import TabbedViewSwitch from './TabbedViewSwitch.jsx';
 import ExecutiveSummary from './ExecutiveSummary.jsx';
+import FinancialChart from './FinancialChart.jsx';
 
 /**
  * AnalyticsPage
@@ -47,15 +48,8 @@ export default function AnalyticsPage() {
             {/* Executive Financial KPI Summary Cards */}
             <ExecutiveSummary />
 
-            {/* Financial Chart Slot Placeholder (Nov 07 Milestone) */}
-            <section className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-700/80 bg-slate-800/50 p-10 text-center">
-              <p className="text-sm font-semibold text-slate-300">
-                Financial Cost &amp; ROI Bar Chart Slot
-              </p>
-              <p className="mt-1 text-xs text-slate-500">
-                Ready for Nov 07 30-Day Comparison Integration (Traditional Coal vs GridVault ESS)
-              </p>
-            </section>
+            {/* Financial Cost & ROI Bar Chart */}
+            <FinancialChart />
 
             {/* Compliance Table Slot Placeholder (Nov 09 Milestone) */}
             <section className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-700/80 bg-slate-800/50 p-8 text-center">
@@ -71,12 +65,9 @@ export default function AnalyticsPage() {
 
         {/* Tab 2: Dedicated Financial ROI View */}
         {activeTab === 'financial' && (
-          <section className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-700/80 bg-slate-800/60 p-12 text-center">
-            <h3 className="text-base font-semibold text-white">Daily Cost &amp; Arbitrage Ledger</h3>
-            <p className="mt-1 max-w-md text-xs text-slate-400">
-              Interactive 30-day side-by-side cost visualization connected to Supabase financial_record table.
-            </p>
-          </section>
+          <div className="space-y-6">
+            <FinancialChart />
+          </div>
         )}
 
         {/* Tab 3: Dedicated Compliance & Audit View */}
