@@ -5,6 +5,7 @@ import DateRangeSelector from './DateRangeSelector.jsx';
 import TabbedViewSwitch from './TabbedViewSwitch.jsx';
 import ExecutiveSummary from './ExecutiveSummary.jsx';
 import FinancialChart from './FinancialChart.jsx';
+import PaybackCurveChart from './PaybackCurveChart.jsx';
 
 /**
  * AnalyticsPage
@@ -51,6 +52,9 @@ export default function AnalyticsPage() {
             {/* Financial Cost & ROI Bar Chart */}
             <FinancialChart />
 
+            {/* Cumulative ROI vs Capex Payback Curve Graph */}
+            <PaybackCurveChart />
+
             {/* Compliance Table Slot Placeholder (Nov 09 Milestone) */}
             <section className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-700/80 bg-slate-800/50 p-8 text-center">
               <p className="text-sm font-semibold text-slate-300">
@@ -67,6 +71,7 @@ export default function AnalyticsPage() {
         {activeTab === 'financial' && (
           <div className="space-y-6">
             <FinancialChart />
+            <PaybackCurveChart />
           </div>
         )}
 
