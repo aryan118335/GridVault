@@ -6,6 +6,7 @@ import TabbedViewSwitch from './TabbedViewSwitch.jsx';
 import ExecutiveSummary from './ExecutiveSummary.jsx';
 import FinancialChart from './FinancialChart.jsx';
 import PaybackCurveChart from './PaybackCurveChart.jsx';
+import ComplianceTable from './ComplianceTable.jsx';
 
 /**
  * AnalyticsPage
@@ -55,15 +56,8 @@ export default function AnalyticsPage() {
             {/* Cumulative ROI vs Capex Payback Curve Graph */}
             <PaybackCurveChart />
 
-            {/* Compliance Table Slot Placeholder (Nov 09 Milestone) */}
-            <section className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-700/80 bg-slate-800/50 p-8 text-center">
-              <p className="text-sm font-semibold text-slate-300">
-                Government Compliance Reports Slot
-              </p>
-              <p className="mt-1 text-xs text-slate-500">
-                Ready for Nov 09 Regulatory Report Table &amp; Direct PDF Download Integration
-              </p>
-            </section>
+            {/* Government Compliance Reports Table */}
+            <ComplianceTable />
           </div>
         )}
 
@@ -77,12 +71,9 @@ export default function AnalyticsPage() {
 
         {/* Tab 3: Dedicated Compliance & Audit View */}
         {activeTab === 'compliance' && (
-          <section className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-700/80 bg-slate-800/60 p-12 text-center">
-            <h3 className="text-base font-semibold text-white">Regulatory Audit Log &amp; Filings</h3>
-            <p className="mt-1 max-w-md text-xs text-slate-400">
-              FERC/NERC and CEA compliance documents with one-click signed PDF exports.
-            </p>
-          </section>
+          <div className="space-y-6">
+            <ComplianceTable />
+          </div>
         )}
       </div>
     </DashboardLayout>
