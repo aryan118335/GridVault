@@ -1,19 +1,42 @@
 import React, { useState } from "react";
 
-// ScenarioInjector – left‑side control panel placeholder.
-// Sliders, buttons and other controls will be added in later milestones.
-
+// ScenarioInjector – left‑side control panel.
 const ScenarioInjector = () => {
   // Local state for the two sliders (default values are arbitrary)
   const [solarOutput, setSolarOutput] = useState(50);
   const [cityDemand, setCityDemand] = useState(80);
 
-  // Click handler placeholder – will later call the backend API
-  const handleHeavyRain = () => {
-    // TODO: POST to /api/simulate/heavy‑rain
-    console.log("Heavy Rain button clicked");
+  // -----------------------------------------------------------------
+  // POST request to trigger the heavy‑rain simulation on the backend.
+  // -----------------------------------------------------------------
+  const handleHeavyRain = async () => {
+    try {
+      const response = await fetch("/api/simulate/heavy-rain", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        // Send the current slider values if the backend needs them
+        body: JSON.stringify({ solarOutput, cityDemand }),
+      });
+
+      if (!response.ok) {
+        console.error(
+          `Heavy‑rain request failed: ${response.status} ${response.statusText}`
+        );
+        return;
+      }
+
+      const data = await response.json();
+      console.log("Heavy‑rain simulation started:", data);
+    } catch (err) {
+      console.error("Error calling heavy‑rain endpoint:", err);
+    }
   };
 
+  // -----------------------------------------------------------------
+  // UI
+  // -----------------------------------------------------------------
   return (
     <div className="bg-slate-800 p-4 rounded-lg space-y-6">
       {/* Slider: Target Solar Output */}
