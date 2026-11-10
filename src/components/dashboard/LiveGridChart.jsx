@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   CategoryScale,
   Chart as ChartJS,
@@ -11,7 +11,7 @@ import {
   Tooltip,
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
-import { Radio } from 'lucide-react';
+import { AlertCircle, Loader2, Radio, RefreshCw } from 'lucide-react';
 
 ChartJS.register(
   CategoryScale,
@@ -48,37 +48,55 @@ function mapApiRowToPoint(row) {
   };
 }
 
+const POLL_INTERVAL_MS = 10000;
+
 export default function LiveGridChart({ onDataUpdate }) {
   const [points, setPoints] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [lastSyncedAt, setLastSyncedAt] = useState(null);
   const onDataUpdateRef = useRef(onDataUpdate);
 
   useEffect(() => {
     onDataUpdateRef.current = onDataUpdate;
   }, [onDataUpdate]);
 
+  const fetchLiveTelemetry = useCallback(async (signal) => {
+    try {
+      const res = await fetch('/api/grid/live', { signal });
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+      const json = await res.json();
+      const mapped = Array.isArray(json.data) ? json.data.map(mapApiRowToPoint) : [];
+      setPoints(mapped);
+      setError(null);
+      setLastSyncedAt(new Date());
+      if (mapped.length > 0) {
+        onDataUpdateRef.current?.(mapped[mapped.length - 1], mapped);
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        setError(err.message || 'Unable to load live grid telemetry');
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     const controller = new AbortController();
+    fetchLiveTelemetry(controller.signal);
 
-    async function loadInitialLiveGrid() {
-      try {
-        const res = await fetch('/api/grid/live', { signal: controller.signal });
-        if (!res.ok) return;
-        const json = await res.json();
-        const mapped = Array.isArray(json.data) ? json.data.map(mapApiRowToPoint) : [];
-        setPoints(mapped);
-        if (mapped.length > 0) {
-          onDataUpdateRef.current?.(mapped[mapped.length - 1], mapped);
-        }
-      } catch (err) {
-        if (err.name !== 'AbortError') {
-          console.error('[LiveGridChart] Failed to fetch /api/grid/live:', err.message);
-        }
-      }
-    }
+    const timer = setInterval(() => {
+      fetchLiveTelemetry(controller.signal);
+    }, POLL_INTERVAL_MS);
 
-    loadInitialLiveGrid();
-    return () => controller.abort();
-  }, []);
+    return () => {
+      clearInterval(timer);
+      controller.abort();
+    };
+  }, [fetchLiveTelemetry]);
 
   const chartData = useMemo(
     () => ({
@@ -197,14 +215,37 @@ export default function LiveGridChart({ onDataUpdate }) {
           </div>
 
           <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900/80 px-2.5 py-1 font-mono text-[11px] text-slate-300">
-            <Radio className="h-3 w-3 text-emerald-400" />
-            API Live
+            <Radio className={`h-3 w-3 ${error ? 'text-rose-400' : 'text-emerald-400 animate-pulse'}`} />
+            {error ? 'Offline' : lastSyncedAt ? `10s Poll • ${formatTimeLabel(lastSyncedAt)}` : 'Live 10s'}
           </span>
         </div>
       </div>
 
+      {error && (
+        <div className="mb-3 flex items-center justify-between gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-300">
+          <span className="inline-flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            Live telemetry stream error: {error}
+          </span>
+          <button
+            type="button"
+            onClick={() => fetchLiveTelemetry()}
+            className="inline-flex items-center gap-1 rounded bg-rose-500/20 px-2 py-1 font-medium text-rose-200 hover:bg-rose-500/30"
+          >
+            <RefreshCw className="h-3 w-3" /> Retry
+          </button>
+        </div>
+      )}
+
       <div className="relative h-[320px] w-full">
-        <Line data={chartData} options={chartOptions} />
+        {loading && points.length === 0 ? (
+          <div className="flex h-full items-center justify-center gap-2 text-sm text-slate-400">
+            <Loader2 className="h-5 w-5 animate-spin text-teal-400" />
+            Loading live grid telemetry...
+          </div>
+        ) : (
+          <Line data={chartData} options={chartOptions} />
+        )}
       </div>
     </section>
   );
