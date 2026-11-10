@@ -16,6 +16,8 @@ import ComplianceTable from './ComplianceTable.jsx';
  */
 export default function AnalyticsPage() {
   const [selectedRange, setSelectedRange] = useState('30D');
+  const [aggregation, setAggregation] = useState('1d');
+  const [dateBounds, setDateBounds] = useState({ start: '2026-10-19', end: '2026-11-18' });
   const [activeTab, setActiveTab] = useState('overview');
   const [lastSynced, setLastSynced] = useState('Just now');
 
@@ -29,18 +31,25 @@ export default function AnalyticsPage() {
     );
   };
 
+  const handleRangeChange = (rangeId, bounds) => {
+    setSelectedRange(rangeId);
+    if (bounds) setDateBounds(bounds);
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
         {/* KPI Header Ribbon */}
         <KPIHeaderRibbon lastSynced={lastSynced} onRefresh={handleRefresh} />
 
-        {/* Workspace Controls Bar: Tabbed View Switch + Date Range Selector */}
+        {/* Workspace Controls Bar: Tabbed View Switch + Custom Date Range & Aggregation Filter */}
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <TabbedViewSwitch activeTab={activeTab} onTabChange={setActiveTab} />
           <DateRangeSelector
             selectedRange={selectedRange}
-            onRangeChange={setSelectedRange}
+            aggregation={aggregation}
+            onRangeChange={handleRangeChange}
+            onAggregationChange={setAggregation}
           />
         </div>
 
