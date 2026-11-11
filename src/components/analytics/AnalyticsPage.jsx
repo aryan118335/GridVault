@@ -8,6 +8,7 @@ import FinancialChart from './FinancialChart.jsx';
 import PaybackCurveChart from './PaybackCurveChart.jsx';
 import ComplianceTable from './ComplianceTable.jsx';
 import ComplianceAuditLog from './ComplianceAuditLog.jsx';
+import CustomReportBuilderModal from './CustomReportBuilderModal.jsx';
 
 /**
  * AnalyticsPage
@@ -21,6 +22,7 @@ export default function AnalyticsPage() {
   const [dateBounds, setDateBounds] = useState({ start: '2026-10-19', end: '2026-11-18' });
   const [activeTab, setActiveTab] = useState('overview');
   const [lastSynced, setLastSynced] = useState('Just now');
+  const [isBuilderOpen, setIsBuilderOpen] = useState(false);
 
   const handleRefresh = () => {
     setLastSynced(
@@ -41,7 +43,11 @@ export default function AnalyticsPage() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* KPI Header Ribbon */}
-        <KPIHeaderRibbon lastSynced={lastSynced} onRefresh={handleRefresh} />
+        <KPIHeaderRibbon
+          lastSynced={lastSynced}
+          onRefresh={handleRefresh}
+          onOpenBuilder={() => setIsBuilderOpen(true)}
+        />
 
         {/* Workspace Controls Bar: Tabbed View Switch + Custom Date Range & Aggregation Filter */}
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -86,6 +92,11 @@ export default function AnalyticsPage() {
             <ComplianceAuditLog />
           </div>
         )}
+        {/* Custom PDF Report Builder Modal */}
+        <CustomReportBuilderModal
+          isOpen={isBuilderOpen}
+          onClose={() => setIsBuilderOpen(false)}
+        />
       </div>
     </DashboardLayout>
   );
