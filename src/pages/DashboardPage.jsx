@@ -1,36 +1,106 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import DashboardLayout from '../components/layout/DashboardLayout.jsx';
 import MetricCard from '../components/dashboard/MetricCard.jsx';
 import LiveGridChart from '../components/dashboard/LiveGridChart.jsx';
 import BatteryGauge from '../components/dashboard/BatteryGauge.jsx';
 
+const SUMMARY_POLL_MS = 10000;
+
 export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [batteryOverride, setBatteryOverride] = useState(null);
 
-  const [metrics, setMetrics] = useState({
-    solar: 1482,
-    wind: 842,
-    demand: 2910,
+  const [summary, setSummary] = useState({
+    solar: null,
+    wind: null,
+    demand: null,
+    netBalance: null,
+    gridStatus: 'BALANCED',
+    frequencyHz: 50.0,
+    peakDemandMw: null,
+    avgRenewableMw: null,
+    renewableSharePct: null,
+    solarDeltaPct: null,
+    windDeltaPct: null,
     soc: 78,
-    solarSparkline: [1320, 1380, 1410, 1395, 1445, 1468, 1482],
-    windSparkline: [890, 865, 872, 850, 860, 838, 842],
-    demandSparkline: [2720, 2765, 2810, 2845, 2875, 2890, 2910],
+    solarSparkline: [],
+    windSparkline: [],
+    demandSparkline: [],
   });
 
-  const handleDataUpdate = useCallback((tick) => {
-    setMetrics((prev) => ({
-      solar: tick.solar,
-      wind: tick.wind,
-      demand: tick.demand,
-      soc: tick.soc ?? prev.soc,
-      solarSparkline: [...prev.solarSparkline, tick.solar].slice(-12),
-      windSparkline: [...prev.windSparkline, tick.wind].slice(-12),
-      demandSparkline: [...prev.demandSparkline, tick.demand].slice(-12),
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function fetchGridSummary() {
+      try {
+        const res = await fetch('/api/grid/summary', { signal: controller.signal });
+        if (!res.ok) return;
+        const json = await res.json();
+        const latest = json?.latest;
+        const agg = json?.aggregates_24h;
+        const sparks = json?.sparklines;
+
+        if (!latest) return;
+
+        setSummary((prev) => ({
+          ...prev,
+          solar: latest.solar_mw,
+          wind: latest.wind_mw,
+          demand: latest.demand_mw,
+          netBalance: latest.net_balance_mw,
+          gridStatus: latest.grid_status || 'BALANCED',
+          frequencyHz: agg?.current_frequency_hz ?? latest.grid_frequency_hz ?? prev.frequencyHz,
+          peakDemandMw: agg?.peak_demand_mw ?? prev.peakDemandMw,
+          avgRenewableMw: agg?.avg_renewable_mw ?? prev.avgRenewableMw,
+          renewableSharePct: agg?.renewable_share_pct ?? prev.renewableSharePct,
+          solarDeltaPct: agg?.solar_delta_pct ?? null,
+          windDeltaPct: agg?.wind_delta_pct ?? null,
+          solarSparkline: Array.isArray(sparks?.solar) ? sparks.solar : prev.solarSparkline,
+          windSparkline: Array.isArray(sparks?.wind) ? sparks.wind : prev.windSparkline,
+          demandSparkline: Array.isArray(sparks?.demand) ? sparks.demand : prev.demandSparkline,
+        }));
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          console.error('[DashboardPage] Failed to fetch /api/grid/summary:', err.message);
+        }
+      }
+    }
+
+    fetchGridSummary();
+    const timer = setInterval(fetchGridSummary, SUMMARY_POLL_MS);
+
+    return () => {
+      clearInterval(timer);
+      controller.abort();
+    };
+  }, []);
+
+  const handleDataUpdate = useCallback((latestTick, allPoints) => {
+    if (!latestTick) return;
+    setSummary((prev) => ({
+      ...prev,
+      solar: latestTick.solar,
+      wind: latestTick.wind,
+      demand: latestTick.demand,
+      netBalance: latestTick.netBalance ?? prev.netBalance,
+      gridStatus: latestTick.status ?? prev.gridStatus,
+      frequencyHz: latestTick.frequency ?? prev.frequencyHz,
+      solarSparkline:
+        Array.isArray(allPoints) && allPoints.length > 0
+          ? allPoints.slice(-12).map((p) => p.solar)
+          : prev.solarSparkline,
+      windSparkline:
+        Array.isArray(allPoints) && allPoints.length > 0
+          ? allPoints.slice(-12).map((p) => p.wind)
+          : prev.windSparkline,
+      demandSparkline:
+        Array.isArray(allPoints) && allPoints.length > 0
+          ? allPoints.slice(-12).map((p) => p.demand)
+          : prev.demandSparkline,
     }));
   }, []);
 
-  const displayedSoc = batteryOverride !== null ? batteryOverride : metrics.soc;
+  const displayedSoc = batteryOverride !== null ? batteryOverride : summary.soc;
 
   const matchesSearch = (label) => {
     if (!searchQuery.trim()) return true;
@@ -45,33 +115,52 @@ export default function DashboardPage() {
           {matchesSearch('Solar Generation') && (
             <MetricCard
               title="Solar Generation"
-              value={metrics.solar}
+              value={summary.solar}
               unit="MW"
-              trend="+12% vs last hr"
+              trend={
+                summary.renewableSharePct !== null
+                  ? `Renewable share: ${summary.renewableSharePct}%`
+                  : '24h solar output'
+              }
+              deltaPct={summary.solarDeltaPct}
+              statusBadge={summary.gridStatus}
               type="solar"
-              sparkline={metrics.solarSparkline}
+              sparkline={summary.solarSparkline}
             />
           )}
 
           {matchesSearch('Wind Generation') && (
             <MetricCard
               title="Wind Generation"
-              value={metrics.wind}
+              value={summary.wind}
               unit="MW"
-              trend="-3% vs last hr"
+              trend={
+                summary.avgRenewableMw !== null
+                  ? `24h avg renewables: ${summary.avgRenewableMw} MW`
+                  : 'Live wind feed'
+              }
+              deltaPct={summary.windDeltaPct}
+              statusBadge={summary.frequencyHz ? `${Number(summary.frequencyHz).toFixed(2)} Hz` : null}
               type="wind"
-              sparkline={metrics.windSparkline}
+              sparkline={summary.windSparkline}
             />
           )}
 
           {matchesSearch('City Power Demand') && (
             <MetricCard
               title="City Power Demand"
-              value={metrics.demand}
+              value={summary.demand}
               unit="MW"
-              trend={metrics.demand > 2800 ? 'High demand' : 'Normal load'}
+              trend={
+                summary.peakDemandMw !== null
+                  ? `24h peak: ${summary.peakDemandMw} MW`
+                  : summary.gridStatus === 'DEFICIT'
+                    ? 'High demand'
+                    : 'Normal load'
+              }
+              statusBadge={summary.gridStatus}
               type="demand"
-              sparkline={metrics.demandSparkline}
+              sparkline={summary.demandSparkline}
             />
           )}
         </div>
@@ -86,7 +175,7 @@ export default function DashboardPage() {
             <BatteryGauge
               soc={displayedSoc}
               capacityMwh={14.8}
-              chargingStatus="Charging"
+              chargingStatus={summary.gridStatus === 'SURPLUS' ? 'Charging' : 'Discharging'}
               timeToFull="2h 15m"
               overrideSoc={batteryOverride}
               onSelectOverride={setBatteryOverride}
