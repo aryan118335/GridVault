@@ -8,6 +8,7 @@ const TYPE_STYLES = {
     iconWrap:
       'border-amber-400/35 bg-amber-500/15 text-amber-400 shadow-[0_0_16px_rgba(250,204,21,0.25)]',
     trendColor: 'text-emerald-400',
+    stroke: '#F59E0B',
   },
   wind: {
     Icon: Wind,
@@ -16,6 +17,7 @@ const TYPE_STYLES = {
     iconWrap:
       'border-teal-400/35 bg-teal-500/15 text-teal-400 shadow-[0_0_16px_rgba(20,184,166,0.25)]',
     trendColor: 'text-slate-400',
+    stroke: '#14B8A6',
   },
   demand: {
     Icon: Zap,
@@ -24,8 +26,23 @@ const TYPE_STYLES = {
     iconWrap:
       'border-rose-500/35 bg-rose-500/15 text-rose-400 shadow-[0_0_16px_rgba(244,63,94,0.25)]',
     trendColor: 'text-rose-400',
+    stroke: '#F43F5E',
   },
 };
+
+function buildSparklinePoints(values = []) {
+  if (values.length < 2) return '0,20 72,20';
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = Math.max(1, max - min);
+  return values
+    .map((val, idx) => {
+      const x = (idx / (values.length - 1)) * 72;
+      const y = 26 - ((val - min) / span) * 20;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(' ');
+}
 
 export default function MetricCard({
   title,
@@ -33,12 +50,14 @@ export default function MetricCard({
   unit = 'MW',
   trend,
   type = 'solar',
+  sparkline = [],
 }) {
   const style = TYPE_STYLES[type] || TYPE_STYLES.solar;
   const { Icon } = style;
 
   const formattedValue =
     typeof value === 'number' ? Math.round(value).toLocaleString('en-US') : value;
+  const polyPoints = buildSparklinePoints(sparkline);
 
   return (
     <div
@@ -63,13 +82,26 @@ export default function MetricCard({
         </div>
       </div>
 
-      <button
-        type="button"
-        className="self-start rounded p-1 text-slate-400 hover:bg-slate-700/60 hover:text-white"
-        aria-label={`${title} options`}
-      >
-        <MoreVertical className="h-4 w-4" />
-      </button>
+      <div className="flex shrink-0 flex-col items-end justify-between self-stretch">
+        <button
+          type="button"
+          className="rounded p-1 text-slate-400 hover:bg-slate-700/60 hover:text-white"
+          aria-label={`${title} options`}
+        >
+          <MoreVertical className="h-4 w-4" />
+        </button>
+
+        <svg width="72" height="30" viewBox="0 0 72 30" className="overflow-visible">
+          <polyline
+            fill="none"
+            stroke={style.stroke}
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            points={polyPoints}
+          />
+        </svg>
+      </div>
     </div>
   );
 }
