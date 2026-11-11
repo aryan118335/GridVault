@@ -7,6 +7,7 @@ import ExecutiveSummary from './ExecutiveSummary.jsx';
 import FinancialChart from './FinancialChart.jsx';
 import PaybackCurveChart from './PaybackCurveChart.jsx';
 import ComplianceTable from './ComplianceTable.jsx';
+import ComplianceAuditLog from './ComplianceAuditLog.jsx';
 
 /**
  * AnalyticsPage
@@ -82,6 +83,7 @@ export default function AnalyticsPage() {
         {activeTab === 'compliance' && (
           <div className="space-y-6">
             <ComplianceTable />
+            <ComplianceAuditLog />
           </div>
         )}
       </div>
