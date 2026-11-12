@@ -1,4 +1,4 @@
-import { MoreVertical, Sun, Wind, Zap } from 'lucide-react';
+import { MoreVertical, Sun, TrendingDown, TrendingUp, Wind, Zap } from 'lucide-react';
 
 const TYPE_STYLES = {
   solar: {
@@ -30,14 +30,30 @@ const TYPE_STYLES = {
   },
 };
 
+function getStatusBadgeStyle(badge) {
+  if (!badge) return null;
+  const upper = String(badge).toUpperCase();
+  if (upper === 'SURPLUS') {
+    return 'border-emerald-400/40 bg-emerald-500/15 text-emerald-300';
+  }
+  if (upper === 'DEFICIT') {
+    return 'border-rose-500/40 bg-rose-500/15 text-rose-300';
+  }
+  if (upper === 'BALANCED') {
+    return 'border-sky-400/40 bg-sky-500/15 text-sky-300';
+  }
+  return 'border-slate-600/70 bg-slate-900/70 text-slate-300';
+}
+
 function buildSparklinePoints(values = []) {
-  if (values.length < 2) return '0,20 72,20';
-  const min = Math.min(...values);
-  const max = Math.max(...values);
+  const numeric = values.filter((v) => typeof v === 'number' && Number.isFinite(v));
+  if (numeric.length < 2) return '0,20 72,20';
+  const min = Math.min(...numeric);
+  const max = Math.max(...numeric);
   const span = Math.max(1, max - min);
-  return values
+  return numeric
     .map((val, idx) => {
-      const x = (idx / (values.length - 1)) * 72;
+      const x = (idx / (numeric.length - 1)) * 72;
       const y = 26 - ((val - min) / span) * 20;
       return `${x.toFixed(1)},${y.toFixed(1)}`;
     })
@@ -49,6 +65,8 @@ export default function MetricCard({
   value,
   unit = 'MW',
   trend,
+  deltaPct = null,
+  statusBadge = null,
   type = 'solar',
   sparkline = [],
 }) {
@@ -56,7 +74,12 @@ export default function MetricCard({
   const { Icon } = style;
 
   const formattedValue =
-    typeof value === 'number' ? Math.round(value).toLocaleString('en-US') : value;
+    typeof value === 'number' && Number.isFinite(value)
+      ? value.toLocaleString('en-US', { maximumFractionDigits: 1 })
+      : value ?? '--';
+
+  const hasDelta = typeof deltaPct === 'number' && Number.isFinite(deltaPct);
+  const badgeClasses = getStatusBadgeStyle(statusBadge);
   const polyPoints = buildSparklinePoints(sparkline);
 
   return (
@@ -71,14 +94,45 @@ export default function MetricCard({
         </div>
 
         <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-slate-300">{title}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="truncate text-sm font-medium text-slate-300">{title}</p>
+            {statusBadge && badgeClasses && (
+              <span
+                className={`inline-flex items-center rounded-full border px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wide ${badgeClasses}`}
+              >
+                {statusBadge}
+              </span>
+            )}
+          </div>
+
           <div className="mt-1 flex items-baseline gap-1.5">
             <span className="font-mono text-2xl font-bold tracking-tight text-white sm:text-3xl">
               {formattedValue}
             </span>
             <span className="text-base font-medium text-slate-300">{unit}</span>
           </div>
-          <p className={`mt-1 truncate text-xs font-medium ${style.trendColor}`}>{trend}</p>
+
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs font-medium">
+            {hasDelta && (
+              <span
+                className={`inline-flex items-center gap-0.5 font-mono ${
+                  deltaPct > 0
+                    ? 'text-emerald-400'
+                    : deltaPct < 0
+                      ? 'text-rose-400'
+                      : 'text-slate-400'
+                }`}
+              >
+                {deltaPct >= 0 ? (
+                  <TrendingUp className="h-3 w-3" />
+                ) : (
+                  <TrendingDown className="h-3 w-3" />
+                )}
+                {deltaPct > 0 ? `+${deltaPct}%` : `${deltaPct}%`}
+              </span>
+            )}
+            {trend && <p className={`truncate ${style.trendColor}`}>{trend}</p>}
+          </div>
         </div>
       </div>
 
