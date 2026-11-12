@@ -1,11 +1,12 @@
 import React from 'react';
 import { Activity, BatteryCharging, CheckCircle2, FileDown, RefreshCw, Zap } from 'lucide-react';
+import BulkTelemetryExportButton from './BulkTelemetryExportButton.jsx';
 
 /**
  * KPIHeaderRibbon
  * Top header ribbon for the Analytics & Financial Reports dashboard workspace.
  * Displays grid interconnect status, active tariff model, battery capacity,
- * and a trigger for the Custom PDF Report Builder.
+ * Custom PDF Report Builder trigger, and Bulk Telemetry CSV Export button.
  */
 export default function KPIHeaderRibbon({ lastSynced = 'Just now', onRefresh, onOpenBuilder }) {
   return (
@@ -40,6 +41,9 @@ export default function KPIHeaderRibbon({ lastSynced = 'Just now', onRefresh, on
             <span>Custom Report Builder</span>
           </button>
         )}
+
+        {/* Nov 12 Milestone: Bulk Telemetry CSV Export Button */}
+        <BulkTelemetryExportButton />
 
         {/* Interconnect Telemetry State */}
         <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-300">
