@@ -1,8 +1,8 @@
 import React, { useState, useCallback } from 'react';
-import DashboardLayout from '../layout/DashboardLayout';
-import ScenarioInjector from './ScenarioInjector';
-import LiveActionFeed from './LiveActionFeed';
-import BatteryStatusWidget from './BatteryStatusWidget';
+import DashboardLayout from '../layout/DashboardLayout.jsx';
+import ScenarioInjector from './ScenarioInjector.jsx';
+import LiveActionFeed from './LiveActionFeed.jsx';
+import BatteryStatusWidget from './BatteryStatusWidget.jsx';
 
 /**
  * SimulationPage – Master wrapper for the GridVault real-time dispatch simulation room.
