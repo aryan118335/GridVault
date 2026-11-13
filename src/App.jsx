@@ -1,33 +1,15 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
-import DashboardLayout from './components/layout/DashboardLayout.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
 import AnalyticsPage from './components/analytics/AnalyticsPage.jsx';
-
-function TeammateRouteNotice({ title, owner }) {
-  return (
-    <DashboardLayout>
-      <div className="rounded-2xl border border-dashed border-slate-700 bg-slate-800/60 p-8 text-center">
-        <h1 className="text-lg font-semibold text-white">{title}</h1>
-        <p className="mt-2 text-sm text-slate-400">
-          This route is reserved for <span className="font-semibold text-teal-400">{owner}</span>.
-          Only Ayush&apos;s Live Grid Dashboard is implemented locally.
-        </p>
-      </div>
-    </DashboardLayout>
-  );
-}
+import SimulationPage from './components/simulation/SimulationPage.jsx';
 
 export default function App() {
   return (
     <Routes>
       <Route path="/" element={<DashboardPage />} />
-      <Route
-        path="/simulation"
-        element={<TeammateRouteNotice title="Simulation & Control Panel" owner="Aryan" />}
-      />
+      <Route path="/simulation" element={<SimulationPage />} />
       <Route path="/analytics" element={<AnalyticsPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
-
