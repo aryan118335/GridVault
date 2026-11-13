@@ -9,6 +9,7 @@ import PaybackCurveChart from './PaybackCurveChart.jsx';
 import ComplianceTable from './ComplianceTable.jsx';
 import ComplianceAuditLog from './ComplianceAuditLog.jsx';
 import CustomReportBuilderModal from './CustomReportBuilderModal.jsx';
+import TariffComparisonCalculator from './TariffComparisonCalculator.jsx';
 
 /**
  * AnalyticsPage
@@ -69,6 +70,9 @@ export default function AnalyticsPage() {
             {/* Financial Cost & ROI Bar Chart */}
             <FinancialChart />
 
+            {/* Interactive Tariff Comparison & Savings Calculator */}
+            <TariffComparisonCalculator />
+
             {/* Cumulative ROI vs Capex Payback Curve Graph */}
             <PaybackCurveChart />
 
@@ -81,6 +85,7 @@ export default function AnalyticsPage() {
         {activeTab === 'financial' && (
           <div className="space-y-6">
             <FinancialChart />
+            <TariffComparisonCalculator />
             <PaybackCurveChart />
           </div>
         )}
