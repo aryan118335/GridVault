@@ -46,6 +46,7 @@ function getStatusBadgeStyle(badge) {
 }
 
 function buildSparklinePoints(values = []) {
+  if (!Array.isArray(values)) return '0,20 72,20';
   const numeric = values.filter((v) => typeof v === 'number' && Number.isFinite(v));
   if (numeric.length < 2) return '0,20 72,20';
   const min = Math.min(...numeric);
@@ -58,6 +59,15 @@ function buildSparklinePoints(values = []) {
       return `${x.toFixed(1)},${y.toFixed(1)}`;
     })
     .join(' ');
+}
+
+function formatMetricValue(value) {
+  if (value === null || value === undefined || value === '') return '--';
+  const num = typeof value === 'number' ? value : Number(value);
+  if (Number.isFinite(num)) {
+    return num.toLocaleString('en-US', { maximumFractionDigits: 1 });
+  }
+  return String(value);
 }
 
 export default function MetricCard({
@@ -73,10 +83,7 @@ export default function MetricCard({
   const style = TYPE_STYLES[type] || TYPE_STYLES.solar;
   const { Icon } = style;
 
-  const formattedValue =
-    typeof value === 'number' && Number.isFinite(value)
-      ? value.toLocaleString('en-US', { maximumFractionDigits: 1 })
-      : value ?? '--';
+  const formattedValue = formatMetricValue(value);
 
   const hasDelta = typeof deltaPct === 'number' && Number.isFinite(deltaPct);
   const badgeClasses = getStatusBadgeStyle(statusBadge);

@@ -35,16 +35,22 @@ function formatTimeLabel(isoOrDate) {
   });
 }
 
+function toSafeNumber(val, fallback = 0) {
+  const num = Number(val);
+  return Number.isFinite(num) ? num : fallback;
+}
+
 function mapApiRowToPoint(row) {
+  if (!row || typeof row !== 'object') return null;
   return {
-    id: row.id,
+    id: row.id ?? null,
     label: formatTimeLabel(row.recorded_at),
-    solar: Number(row.solar_mw),
-    wind: Number(row.wind_mw),
-    demand: Number(row.demand_mw),
-    netBalance: Number(row.net_balance_mw),
-    frequency: Number(row.grid_frequency_hz),
-    status: row.grid_status,
+    solar: toSafeNumber(row.solar_mw, 0),
+    wind: toSafeNumber(row.wind_mw, 0),
+    demand: toSafeNumber(row.demand_mw, 0),
+    netBalance: toSafeNumber(row.net_balance_mw, 0),
+    frequency: toSafeNumber(row.grid_frequency_hz, 50.0),
+    status: row.grid_status || 'BALANCED',
   };
 }
 
@@ -68,7 +74,9 @@ export default function LiveGridChart({ onDataUpdate }) {
         throw new Error(`HTTP ${res.status}`);
       }
       const json = await res.json();
-      const mapped = Array.isArray(json.data) ? json.data.map(mapApiRowToPoint) : [];
+      const mapped = Array.isArray(json?.data)
+        ? json.data.map(mapApiRowToPoint).filter(Boolean)
+        : [];
       setPoints(mapped);
       setError(null);
       setLastSyncedAt(new Date());
@@ -242,6 +250,13 @@ export default function LiveGridChart({ onDataUpdate }) {
           <div className="flex h-full items-center justify-center gap-2 text-sm text-slate-400">
             <Loader2 className="h-5 w-5 animate-spin text-teal-400" />
             Loading live grid telemetry...
+          </div>
+        ) : points.length === 0 ? (
+          <div className="flex h-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-700 text-center text-sm text-slate-400">
+            <p className="font-medium text-slate-300">No live grid telemetry available yet</p>
+            <p className="text-xs text-slate-500">
+              Waiting for /api/grid/live readings from PostgreSQL.
+            </p>
           </div>
         ) : (
           <Line data={chartData} options={chartOptions} />

@@ -140,7 +140,11 @@ export default function DashboardPage() {
                   : 'Live wind feed'
               }
               deltaPct={summary.windDeltaPct}
-              statusBadge={summary.frequencyHz ? `${Number(summary.frequencyHz).toFixed(2)} Hz` : null}
+              statusBadge={
+                Number.isFinite(Number(summary.frequencyHz))
+                  ? `${Number(summary.frequencyHz).toFixed(2)} Hz`
+                  : '-- Hz'
+              }
               type="wind"
               sparkline={summary.windSparkline}
             />
