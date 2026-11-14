@@ -12,6 +12,7 @@ import {
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
 import { CheckCircle2, DollarSign, Milestone, Sparkles, TrendingUp } from 'lucide-react';
+import { formatCurrency } from './formatters.js';
 
 ChartJS.register(
   CategoryScale,
@@ -23,12 +24,6 @@ ChartJS.register(
   Legend,
   Filler
 );
-
-const CURRENCY_FORMATTER = new Intl.NumberFormat('en-IN', {
-  style: 'currency',
-  currency: 'INR',
-  maximumFractionDigits: 0,
-});
 
 // 60-Month (5-Year) projection data with breakeven inflection at Month 45 (3.8 Years)
 const CAPEX_BASELINE = 25000000; // ₹2.5 Crore initial ESS turnkey Capex (14.8 MWh LFP + Inverters)
@@ -136,7 +131,7 @@ export default function PaybackCurveChart() {
           callbacks: {
             label: (ctx) => {
               const val = ctx.parsed.y ?? 0;
-              return ` ${ctx.dataset.label}: ${CURRENCY_FORMATTER.format(val)}`;
+              return ` ${ctx.dataset.label}: ${formatCurrency(val)}`;
             },
             afterBody: (items) => {
               const idx = items[0]?.dataIndex;
@@ -144,8 +139,8 @@ export default function PaybackCurveChart() {
               if (!point) return '';
               const diff = point.netProfit;
               return diff >= 0
-                ? ` 🎉 Net ROI Profit: +${CURRENCY_FORMATTER.format(diff)}`
-                : ` ⏳ Capex Deficit: -${CURRENCY_FORMATTER.format(Math.abs(diff))}`;
+                ? ` 🎉 Net ROI Profit: +${formatCurrency(diff)}`
+                : ` ⏳ Capex Deficit: -${formatCurrency(Math.abs(diff))}`;
             },
           },
         },
@@ -228,7 +223,7 @@ export default function PaybackCurveChart() {
           <span className="text-[11px] font-medium text-slate-400">Total ESS Capex</span>
           <div className="mt-0.5 flex items-baseline gap-1.5 font-mono">
             <span className="text-lg font-bold text-white">
-              {CURRENCY_FORMATTER.format(CAPEX_BASELINE)}
+              {formatCurrency(CAPEX_BASELINE)}
             </span>
           </div>
           <span className="text-[10px] text-rose-400">Turnkey 14.8MWh Capital Cost</span>
@@ -239,7 +234,7 @@ export default function PaybackCurveChart() {
           <span className="text-[11px] font-medium text-slate-400">Recovered to Date</span>
           <div className="mt-0.5 flex items-baseline gap-1.5 font-mono">
             <span className="text-lg font-bold text-emerald-400">
-              {CURRENCY_FORMATTER.format(currentRecovered)}
+              {formatCurrency(currentRecovered)}
             </span>
             <span className="text-xs text-slate-400">({recoveryPct}%)</span>
           </div>

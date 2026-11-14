@@ -17,10 +17,10 @@ import IRRandLCOSCard from './IRRandLCOSCard.jsx';
  * Supports direct props (title, value, trend) and structured card config objects.
  */
 export default function ExecutiveSummary({
-  // Direct props support as requested in prompt:
+  // Direct props support — numeric values preferred for locale-aware formatting:
   title = 'Total Money Saved',
-  value = '₹3,42,800',
-  trend = '+14% vs last month',
+  value = 342800,        // numeric INR amount
+  trend = 14,           // numeric percentage
 
   // Custom overrides:
   financial,
@@ -30,22 +30,22 @@ export default function ExecutiveSummary({
 }) {
   const financialData = {
     title: financial?.title || title,
-    value: financial?.value || value,
-    trend: financial?.trend || trend,
+    value: financial?.value ?? value,
+    trend: financial?.trend ?? trend,
     subtitle: financial?.subtitle || 'Arbitrage & Peaking Tariff Economics',
   };
 
   const peakDemandData = {
     title: peakDemand?.title || 'Peak Demand Cost Avoided',
-    value: peakDemand?.value || '₹1,84,500',
-    trend: peakDemand?.trend || '+9.2% peak shaved',
+    value: peakDemand?.value ?? 184500,   // numeric INR
+    trend: peakDemand?.trend ?? 9.2,      // numeric percentage
     subtitle: peakDemand?.subtitle || '480 kW Surcharge Reduction via Battery',
   };
 
   const carbonData = {
     title: carbon?.title || 'Carbon Offset',
-    value: carbon?.value || '128.4 MT CO₂e',
-    trend: carbon?.trend || '+18% vs last month',
+    value: carbon?.value ?? 128.4,        // numeric MT CO₂e
+    trend: carbon?.trend ?? 18,           // numeric percentage
     subtitle: carbon?.subtitle || 'Thermal Displaced (≈ 5,840 Trees Planted)',
   };
 

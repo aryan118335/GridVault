@@ -10,6 +10,7 @@ import {
   TrendingDown,
   Zap,
 } from 'lucide-react';
+import { formatCurrency } from './formatters.js';
 
 const PRESETS = [
   {
@@ -34,12 +35,6 @@ const PRESETS = [
     peakKw: 820,
   },
 ];
-
-const CURRENCY = new Intl.NumberFormat('en-IN', {
-  style: 'currency',
-  currency: 'INR',
-  maximumFractionDigits: 0,
-});
 
 /**
  * TariffComparisonCalculator
@@ -275,7 +270,7 @@ export default function TariffComparisonCalculator() {
             <div className="space-y-1 text-xs">
               <div className="flex justify-between">
                 <span className="text-slate-400">1. Standard Flat Commercial Tariff</span>
-                <span className="font-mono font-bold text-white">{CURRENCY.format(calculations.flatTotal)}</span>
+                <span className="font-mono font-bold text-white">{formatCurrency(calculations.flatTotal)}</span>
               </div>
               <div className="h-3 w-full rounded-full bg-slate-800 overflow-hidden">
                 <div className="h-full bg-slate-500 rounded-full" style={{ width: '85%' }} />
@@ -286,7 +281,7 @@ export default function TariffComparisonCalculator() {
             <div className="space-y-1 text-xs">
               <div className="flex justify-between">
                 <span className="text-slate-400">2. Unmitigated Dynamic TOU (Without ESS)</span>
-                <span className="font-mono font-bold text-rose-400">{CURRENCY.format(calculations.unmitigatedTotal)}</span>
+                <span className="font-mono font-bold text-rose-400">{formatCurrency(calculations.unmitigatedTotal)}</span>
               </div>
               <div className="h-3 w-full rounded-full bg-slate-800 overflow-hidden">
                 <div className="h-full bg-rose-500/80 rounded-full" style={{ width: '100%' }} />
@@ -300,7 +295,7 @@ export default function TariffComparisonCalculator() {
                   <Sparkles className="h-3 w-3" />
                   3. GridVault Optimized ESS
                 </span>
-                <span className="font-mono font-bold text-emerald-400">{CURRENCY.format(calculations.essTotal)}</span>
+                <span className="font-mono font-bold text-emerald-400">{formatCurrency(calculations.essTotal)}</span>
               </div>
               <div className="h-3.5 w-full rounded-full bg-slate-800 overflow-hidden shadow-[0_0_12px_rgba(16,185,129,0.25)]">
                 <div
@@ -322,7 +317,7 @@ export default function TariffComparisonCalculator() {
                 </span>
               </div>
               <p className="mt-1 font-mono text-2xl font-bold text-white">
-                {CURRENCY.format(calculations.netSavingsVsFlat)}
+                {formatCurrency(calculations.netSavingsVsFlat)}
               </p>
               <p className="mt-0.5 text-[11px] text-slate-400">Direct monthly cash savings vs flat rate</p>
             </div>
@@ -336,7 +331,7 @@ export default function TariffComparisonCalculator() {
                 </span>
               </div>
               <p className="mt-1 font-mono text-2xl font-bold text-white">
-                {CURRENCY.format(calculations.annualizedSavings)}
+                {formatCurrency(calculations.annualizedSavings)}
               </p>
               <p className="mt-0.5 text-[11px] text-slate-400">Projected 12-month cumulative benefit</p>
             </div>

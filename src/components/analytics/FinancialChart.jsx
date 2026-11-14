@@ -10,14 +10,9 @@ import {
 } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
 import { BarChart3, Coins, Database, Layers, TrendingUp } from 'lucide-react';
+import { formatCurrency } from './formatters.js';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
-
-const CURRENCY_FORMATTER = new Intl.NumberFormat('en-IN', {
-  style: 'currency',
-  currency: 'INR',
-  maximumFractionDigits: 0,
-});
 
 // Sample 30-day realistic dataset simulating Supabase `financial_record` table
 function generateInitialFinancialData() {
@@ -207,7 +202,7 @@ export default function FinancialChart() {
           callbacks: {
             label: (ctx) => {
               const val = ctx.parsed.y ?? 0;
-              return ` ${ctx.dataset.label}: ${CURRENCY_FORMATTER.format(val)}`;
+              return ` ${ctx.dataset.label}: ${formatCurrency(val)}`;
             },
           },
         },
@@ -334,7 +329,7 @@ export default function FinancialChart() {
           <Coins className="h-3.5 w-3.5 text-teal-400" />
           <span className="text-slate-400">30D Total Yield:</span>
           <span className="font-bold text-white">
-            {CURRENCY_FORMATTER.format(chartMode === 'stacked' ? totals.totalYield : totals.savings)}
+            {formatCurrency(chartMode === 'stacked' ? totals.totalYield : totals.savings)}
           </span>
           <span className="text-[10px] text-emerald-400 font-semibold">
             {chartMode === 'stacked' ? '(Gross)' : '(Net Saved)'}
