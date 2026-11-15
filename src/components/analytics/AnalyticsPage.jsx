@@ -10,6 +10,7 @@ import ComplianceTable from './ComplianceTable.jsx';
 import ComplianceAuditLog from './ComplianceAuditLog.jsx';
 import CustomReportBuilderModal from './CustomReportBuilderModal.jsx';
 import TariffComparisonCalculator from './TariffComparisonCalculator.jsx';
+import SystemReadinessPanel from './SystemReadinessPanel.jsx';
 
 /**
  * AnalyticsPage
@@ -78,6 +79,9 @@ export default function AnalyticsPage() {
 
             {/* Government Compliance Reports Table */}
             <ComplianceTable />
+
+            {/* System Readiness & Deployment Health Panel */}
+            <SystemReadinessPanel />
           </div>
         )}
 
