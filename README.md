@@ -59,7 +59,13 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:5173`. `LiveGridChart.jsx` connects via WebSocket to `VITE_WS_URL` (default `ws://localhost:4000`) and automatically falls back to a 1-second live local tick stream (`.slice(-50)`) when the backend is not yet running.
+Open `http://localhost:5173` alongside `node backend/server.js` (port `4001`).
+
+### Live Grid Telemetry Pipeline (Ayush)
+- **Schema & Seed:** `database/08_grid_telemetry.sql` (`grid_state` table + `idx_grid_state_recorded_at_desc` + 48 diurnal telemetry seed rows).
+- **Background Worker:** `backend/services/telemetryWorker.js` (`generateGridTick()`, 500-row retention pruning, and `startTelemetryWorker(10000)`).
+- **Grid API (`/api/grid/*`):** `GET /api/grid/live`, `GET /api/grid/summary`, `GET /api/grid/history?hours=24`, and `POST /api/grid/tick`.
+- **Dashboard Wiring:** `LiveGridChart.jsx` and `DashboardPage.jsx` poll `/api/grid/live` and `/api/grid/summary` every 10 seconds via the Vite `/api` proxy to port `4001`.
 
 ## 🔬 Analytics Module — Varad Bhardwaj
 
