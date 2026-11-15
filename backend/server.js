@@ -30,6 +30,7 @@ dotenv.config();
 
 import express from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 
 import roiRoutes from './routes/roiRoutes.js';
 import exportRoutes from './routes/exportRoutes.js';
@@ -37,6 +38,12 @@ import reportsRoutes from './routes/reportsRoutes.js';
 import healthRoutes from './routes/healthRoutes.js';
 import simulationRoutes from './routes/simulationRoutes.js';
 import gridRoutes from './routes/gridRoutes.js';
+import authRoutes from './routes/authRoutes.js';
+import {
+  securityHeaders,
+  apiRateLimiter,
+  strictWriteRateLimiter,
+} from './middleware/securityMiddleware.js';
 import { startTelemetryWorker } from './services/telemetryWorker.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -46,8 +53,10 @@ const app = express();
 const PORT = process.env.PORT || 4001;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// CORS — allow Vite dev server (port 5173) and production frontend origin
+// Security Headers (Helmet) & CORS allowlist
 // ─────────────────────────────────────────────────────────────────────────────
+app.use(securityHeaders);
+
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
@@ -70,10 +79,13 @@ app.use(
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Body parsing
+// Body & Cookie parsing + API Rate Limiter
 // ─────────────────────────────────────────────────────────────────────────────
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+app.use('/api', apiRateLimiter);
+app.use('/api/auth/login', strictWriteRateLimiter);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Request logger (lightweight — no morgan dep)
@@ -87,6 +99,7 @@ app.use((req, _res, next) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // Route modules
 // ─────────────────────────────────────────────────────────────────────────────
+app.use('/api/auth', authRoutes);
 app.use('/api/roi', roiRoutes);
 app.use('/api/export', exportRoutes);
 app.use('/api/reports', reportsRoutes);
@@ -104,9 +117,15 @@ app.get('/', (_req, res) => {
     status: 'running',
     timestamp: new Date().toISOString(),
     routes: [
+      'POST /api/auth/login',
+      'POST /api/auth/refresh',
+      'POST /api/auth/logout',
+      'GET /api/auth/me',
+      'GET /api/auth/admin/audit-summary',
+      'GET /api/auth/watchlists/:id',
       'GET /api/grid/live',
       'GET /api/grid/summary',
-      'GET /api/grid/history?hours=24',
+      'GET /api/grid/history?hours=24&status=SURPLUS&sort=desc&page=1&limit=10',
       'POST /api/grid/tick',
       'GET /api/battery/status',
       'POST /api/simulate/heavy-rain',
@@ -130,24 +149,33 @@ app.get('/', (_req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 404 handler
+// 404 handler (consistent JSON error envelope)
 // ─────────────────────────────────────────────────────────────────────────────
 app.use((req, res) => {
   res.status(404).json({
-    error: 'Not Found',
-    path: req.path,
-    method: req.method,
+    error: `Route not found: ${req.method} ${req.originalUrl}`,
+    code: 'NOT_FOUND',
+    status: 404,
+    path: req.originalUrl,
+    timestamp: new Date().toISOString(),
   });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Global error handler
+// Global error handler (centralized JSON envelope; hides stack in production)
 // ─────────────────────────────────────────────────────────────────────────────
 // eslint-disable-next-line no-unused-vars
-app.use((err, _req, res, _next) => {
+app.use((err, req, res, _next) => {
+  const status = err.status || 500;
   console.error('[GridVault API Error]', err.message);
-  res.status(err.status || 500).json({
-    error: err.message || 'Internal Server Error',
+  res.status(status).json({
+    error: status === 500 && process.env.NODE_ENV === 'production'
+      ? 'Internal Server Error'
+      : err.message || 'Internal Server Error',
+    code: err.code || (status >= 500 ? 'INTERNAL_SERVER_ERROR' : 'REQUEST_ERROR'),
+    status,
+    path: req.originalUrl,
+    timestamp: new Date().toISOString(),
     ...(process.env.NODE_ENV !== 'production' && { stack: err.stack }),
   });
 });
