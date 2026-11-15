@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import PdfVerificationPipeline from './PdfVerificationPipeline.jsx';
 import {
   CheckCircle2,
   Clock,
@@ -170,6 +171,7 @@ export default function ComplianceTable() {
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [downloadingId, setDownloadingId] = useState(null);
   const [downloadNotice, setDownloadNotice] = useState(null);
+  const [verifyingId, setVerifyingId] = useState(null); // report ID being pipeline-verified
 
   // Filter reports by search term and status
   const filteredReports = reports.filter((report) => {
@@ -182,8 +184,15 @@ export default function ComplianceTable() {
     return matchesSearch && matchesStatus;
   });
 
-  // Direct Browser PDF Download Trigger
+  // Direct Browser PDF Download Trigger — with pipeline verification step
   const handleDownloadPdf = async (report) => {
+    // Step 1: Show verification pipeline inline
+    setVerifyingId(report.id);
+    setDownloadNotice(`Verifying pipeline for ${report.id}…`);
+
+    // Allow pipeline animation to run briefly before triggering download
+    await new Promise((r) => setTimeout(r, 3600));
+    setVerifyingId(null);
     setDownloadingId(report.id);
     setDownloadNotice(`Generating signed PDF for ${report.id}...`);
 
@@ -292,8 +301,15 @@ export default function ComplianceTable() {
         </div>
       </div>
 
+      {/* PDF Verification Pipeline — shown inline when a download is initiated */}
+      {verifyingId && (
+        <div className="mb-4">
+          <PdfVerificationPipeline reportId={verifyingId} compact />
+        </div>
+      )}
+
       {/* Download Alert Notice */}
-      {downloadNotice && (
+      {downloadNotice && !verifyingId && (
         <div className="mb-4 flex items-center gap-2 rounded-xl border border-teal-500/40 bg-teal-500/15 px-3.5 py-2 text-xs text-teal-300">
           <CheckCircle2 className="h-4 w-4 shrink-0 text-teal-400" />
           <span>{downloadNotice}</span>

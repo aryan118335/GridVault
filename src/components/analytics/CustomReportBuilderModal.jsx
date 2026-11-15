@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import PdfVerificationPipeline from './PdfVerificationPipeline.jsx';
 import {
   Check,
   CheckCircle2,
@@ -76,6 +77,7 @@ export default function CustomReportBuilderModal({ isOpen, onClose }) {
   });
   const [isCompiling, setIsCompiling] = useState(false);
   const [compileSuccess, setCompileSuccess] = useState(false);
+  const [showPipelineOverlay, setShowPipelineOverlay] = useState(false);
 
   if (!isOpen) return null;
 
@@ -101,6 +103,7 @@ export default function CustomReportBuilderModal({ isOpen, onClose }) {
   const handleCompilePdf = async () => {
     setIsCompiling(true);
     setCompileSuccess(false);
+    setShowPipelineOverlay(true); // Show 4-stage verification overlay
 
     try {
       // Smooth compilation simulation
@@ -199,12 +202,14 @@ startxref
       window.URL.revokeObjectURL(url);
 
       setCompileSuccess(true);
+      setShowPipelineOverlay(false);
       setTimeout(() => {
         setIsCompiling(false);
         onClose();
       }, 1400);
     } catch {
       setIsCompiling(false);
+      setShowPipelineOverlay(false);
     }
   };
 
@@ -213,6 +218,21 @@ startxref
       <div className="relative w-full max-w-xl overflow-hidden rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl">
         {/* Top Gradient Ribbon */}
         <div className="h-1.5 w-full bg-gradient-to-r from-teal-400 via-sky-500 to-emerald-500" />
+
+        {/* 4-Stage Pipeline Verification Overlay — shown during compile */}
+        {showPipelineOverlay && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-slate-900/95 backdrop-blur-sm p-6">
+            <div className="w-full max-w-sm">
+              <p className="mb-4 text-center text-sm font-semibold text-white">
+                Verifying PDF Pipeline…
+              </p>
+              <PdfVerificationPipeline
+                reportId={`GV-RPT-${Date.now()}`}
+                onVerified={() => setShowPipelineOverlay(false)}
+              />
+            </div>
+          </div>
+        )}
 
         {/* Modal Header */}
         <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4">
