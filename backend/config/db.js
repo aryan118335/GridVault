@@ -38,6 +38,12 @@ export async function query(text, params) {
   try {
     const res = await pool.query(text, params);
     const duration = Date.now() - start;
+    if (process.env.LOG_SQL === 'true') {
+      const compactSql = text.replace(/\s+/g, ' ').trim();
+      console.log(
+        `[DB Query ${duration}ms] ${compactSql.slice(0, 140)}${compactSql.length > 140 ? '...' : ''} | params=${JSON.stringify(params || [])} | rows=${res.rowCount}`
+      );
+    }
     return { rows: res.rows, rowCount: res.rowCount, duration };
   } catch (err) {
     // If DB is temporarily unreachable, return empty rows with error details

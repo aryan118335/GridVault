@@ -6,8 +6,11 @@
 import express from 'express';
 import { query } from '../config/db.js';
 import { generateGridTick } from '../services/telemetryWorker.js';
+import { strictWriteRateLimiter } from '../middleware/securityMiddleware.js';
 
 const router = express.Router();
+const ALLOWED_STATUSES = ['SURPLUS', 'DEFICIT', 'BALANCED'];
+const MAX_PAGE_LIMIT = 50;
 
 function normalizeRow(row) {
   if (!row) return null;
@@ -113,28 +116,98 @@ router.get('/summary', async (_req, res) => {
 });
 
 /**
- * GET /api/grid/history?hours=24
- * Returns historical grid_state rows within the requested rolling hour window.
+ * GET /api/grid/history?hours=24&status=SURPLUS&sort=desc&page=1&limit=10
+ * Supports time-window filtering, grid_status enum filter, sorting, and bounded pagination
+ * (clamped at MAX_PAGE_LIMIT = 50 to prevent huge page queries).
  */
 router.get('/history', async (req, res) => {
-  const parsedHours = Number(req.query.hours);
-  const hours = Number.isFinite(parsedHours) ? Math.min(168, Math.max(1, Math.round(parsedHours))) : 24;
+  const rawHours = req.query.hours;
+  const parsedHours = rawHours !== undefined ? Number(rawHours) : 24;
+  if (!Number.isFinite(parsedHours) || parsedHours < 1 || parsedHours > 168) {
+    return res.status(400).json({
+      error: 'Validation error: hours query parameter must be between 1 and 168',
+      code: 'VALIDATION_ERROR',
+      status: 400,
+      path: req.originalUrl,
+      timestamp: new Date().toISOString(),
+    });
+  }
+  const hours = Math.round(parsedHours);
 
-  const result = await query(
-    `SELECT id, recorded_at, solar_mw, wind_mw, demand_mw, net_balance_mw, grid_frequency_hz, grid_status
-     FROM grid_state
-     WHERE recorded_at >= NOW() - ($1::int * INTERVAL '1 hour')
-     ORDER BY recorded_at ASC, id ASC`,
-    [hours]
-  );
-
-  if (result.error) {
-    return res.status(500).json({ error: result.error, hours, data: [] });
+  const rawStatus = typeof req.query.status === 'string' ? req.query.status.trim().toUpperCase() : null;
+  if (rawStatus && !ALLOWED_STATUSES.includes(rawStatus)) {
+    return res.status(400).json({
+      error: `Validation error: status must be one of ${ALLOWED_STATUSES.join(', ')}`,
+      code: 'VALIDATION_ERROR',
+      status: 400,
+      path: req.originalUrl,
+      timestamp: new Date().toISOString(),
+    });
   }
 
-  const rows = result.rows.map(normalizeRow);
+  const rawSort = typeof req.query.sort === 'string' ? req.query.sort.trim().toLowerCase() : 'asc';
+  if (rawSort !== 'asc' && rawSort !== 'desc') {
+    return res.status(400).json({
+      error: 'Validation error: sort must be either asc or desc',
+      code: 'VALIDATION_ERROR',
+      status: 400,
+      path: req.originalUrl,
+      timestamp: new Date().toISOString(),
+    });
+  }
+  const orderDirection = rawSort === 'desc' ? 'DESC' : 'ASC';
+
+  const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
+  const requestedLimit = Number.parseInt(req.query.limit, 10) || 20;
+  const limit = Math.min(MAX_PAGE_LIMIT, Math.max(1, requestedLimit));
+  const offset = (page - 1) * limit;
+
+  const whereClauses = [`recorded_at >= NOW() - ($1::int * INTERVAL '1 hour')`];
+  const filterParams = [hours];
+  if (rawStatus) {
+    filterParams.push(rawStatus);
+    whereClauses.push(`grid_status = $${filterParams.length}`);
+  }
+  const whereSql = whereClauses.join(' AND ');
+
+  const [countRes, rowsRes] = await Promise.all([
+    query(`SELECT COUNT(*)::int AS total FROM grid_state WHERE ${whereSql}`, filterParams),
+    query(
+      `SELECT id, recorded_at, solar_mw, wind_mw, demand_mw, net_balance_mw, grid_frequency_hz, grid_status
+       FROM grid_state
+       WHERE ${whereSql}
+       ORDER BY recorded_at ${orderDirection}, id ${orderDirection}
+       LIMIT $${filterParams.length + 1} OFFSET $${filterParams.length + 2}`,
+      [...filterParams, limit, offset]
+    ),
+  ]);
+
+  if (countRes.error || rowsRes.error) {
+    return res.status(500).json({
+      error: countRes.error || rowsRes.error,
+      code: 'DATABASE_ERROR',
+      status: 500,
+      path: req.originalUrl,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  const total = Number(countRes.rows[0]?.total || 0);
+  const rows = rowsRes.rows.map(normalizeRow);
   return res.json({
     hours,
+    filters: {
+      hours,
+      status: rawStatus || 'ALL',
+      sort: rawSort,
+    },
+    pagination: {
+      page,
+      limit,
+      maxLimit: MAX_PAGE_LIMIT,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+    },
     count: rows.length,
     data: rows,
   });
@@ -142,9 +215,9 @@ router.get('/history', async (req, res) => {
 
 /**
  * POST /api/grid/tick
- * Manually triggers generateGridTick() and returns the newly inserted telemetry row.
+ * Rate-limited manual trigger calling generateGridTick() and returning the inserted row.
  */
-router.post('/tick', async (_req, res) => {
+router.post('/tick', strictWriteRateLimiter, async (_req, res) => {
   try {
     const inserted = await generateGridTick();
     return res.status(201).json({
